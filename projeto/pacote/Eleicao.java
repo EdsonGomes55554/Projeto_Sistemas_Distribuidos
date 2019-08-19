@@ -21,6 +21,11 @@ public class Eleicao implements Watcher {
 
     static ZooKeeper zk = null;
     static Integer mutex;
+    static Queue qVotos;
+    static Queue qPergunta;
+    static int numJogadores = 4;
+    static Scanner scanner;
+
 
     String root;
 
@@ -89,7 +94,6 @@ public class Eleicao implements Watcher {
         
         boolean elect() throws KeeperException, InterruptedException{
         	this.pathName = zk.create(root + "/n-", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
-        	System.out.println("My path name is: "+pathName+" and my id is: "+id+"!");
         	return check();
         }
         
@@ -98,7 +102,6 @@ public class Eleicao implements Watcher {
            	while (true) {
         		List<String> list = zk.getChildren(root, false);
         		Integer min = new Integer(list.get(0).substring(5));
-        		System.out.println("List: "+list.toString());
         		String minString = list.get(0);
         		for(String s : list){
         			Integer tempValue = new Integer(s.substring(5));
@@ -108,7 +111,6 @@ public class Eleicao implements Watcher {
         				minString = s;
         			}
         		}
-        		System.out.println("Suffix: "+suffix+", min: "+min);
         		if (suffix.equals(min)) {
         			this.leader();
         			return true;
@@ -125,14 +127,12 @@ public class Eleicao implements Watcher {
         		}
         		//Exists with watch
         		Stat s = zk.exists(root+"/"+maxString, this);
-        		System.out.println("Watching "+root+"/"+maxString);
         		//Step 5
         		if (s != null) {
         			//Wait for notification
         			break;
         		}
         	}
-        	System.out.println(pathName+" is waiting for a notification!");
         	return false;
         	
         }
@@ -143,7 +143,7 @@ public class Eleicao implements Watcher {
             		try {
             			boolean success = check();
             			if (success) {
-            				compute("localhost");
+            				fazerPergunta("localhost");
             			}
             		} catch (Exception e) {e.printStackTrace();}
             	}
@@ -151,7 +151,7 @@ public class Eleicao implements Watcher {
         }
         
         void leader() throws KeeperException, InterruptedException {
-			System.out.println("Become a leader: "+id+"!");
+			System.out.println("Voce e o lider!");
             //Create leader znode
             Stat s2 = zk.exists(leader, false);
             if (s2 == null) {
@@ -161,40 +161,47 @@ public class Eleicao implements Watcher {
             }
         }
         
-        void compute(String ip) {
-            System.out.println("Voce e o lider, faca uma pergunta");
-            Scanner scanner = new Scanner(System.in);
+        void fazerPergunta(String ip) {
+            System.out.println("Faca uma pergunta");
             String pergunta = scanner.nextLine();
-            System.out.println("Pergunta: "+ pergunta);
-            Queue.perguntar(ip, pergunta);
-            Queue.resetarVotos(ip);
+            qPergunta.perguntar(pergunta);
+            qVotos.resetarVotos();
+            System.out.println("Agora responda a pergunta");
+            responder();
     		//System.exit(0);
         }
     }
     
     static void ler(String ip) {
-        System.out.println("Responda a pergunta");
-        String pergunta = Queue.lerPergunta(ip);
+        String pergunta = qPergunta.lerPergunta();
         System.out.println(pergunta);
-        System.out.println("Votos: "+ Queue.lerVotos(ip));
+        responder();
+    }
+
+    static void responder() {
+        String resposta = scanner.nextLine();
+        qVotos.votar(resposta, numJogadores);
     }
 
 
 
-    public static void leaderElection(String args[]) {
+    public static void main(String args[]) {
         // Generate random integer
+        scanner = new Scanner(System.in);
         Random rand = new Random();
         int r = rand.nextInt(1000000);
-    	Leader leader = new Leader(args[1],"/election","/leader",r);
+        qVotos = new Queue(args[0], "/app3/votos");
+        qPergunta = new Queue(args[0], "/app3/pergunta");
+    	Leader leader = new Leader(args[0],"/election","/leader",r);
         try{
         	boolean success = leader.elect();
         	if (success) {
-                leader.compute(args[1]);
+                leader.fazerPergunta(args[0]);
                 while(true) {
 
                 }
         	} else {
-                ler(args[1]);
+                ler(args[0]);
         		while(true) {
         			//Waiting for a notification
         		}
