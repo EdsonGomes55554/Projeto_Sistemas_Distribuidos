@@ -57,7 +57,7 @@ public class Queue extends SyncPrimitive {
         // Add child with value i
         //b.put(i);
         value = i.getBytes();
-        zk.create(root + "/element", value, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
+        zk.create(root + "/", value, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
 
         return true;
     }
@@ -82,18 +82,8 @@ public class Queue extends SyncPrimitive {
                     System.out.println("Esperando pergunta");
                     mutex.wait();
                 } else {
-                    Integer min = new Integer(list.get(0).substring(7));
                     System.out.println("List: "+list.toString());
                     String minString = list.get(0);
-                    for(String s : list){
-                        Integer tempValue = new Integer(s.substring(7));
-                        //System.out.println("Temp value: " + tempValue);
-                        if(tempValue < min) { 
-                            min = tempValue;
-                            minString = s;
-                        }
-                    }
-                   System.out.println("Temporary value: " + root +"/"+ minString);
                     byte[] b = zk.getData(root +"/"+ minString,false, stat);
                     //System.out.println("b: " + Arrays.toString(b)); 	
                     //zk.delete(root +"/"+ minString, 0);
@@ -105,9 +95,54 @@ public class Queue extends SyncPrimitive {
         }
     }
 
+    String lerVotos() throws KeeperException, InterruptedException{
+        String retvalue = "";
+        Stat stat = null;
+
+        // Get the first element available
+        while (true) {
+            synchronized (mutex) {
+                List<String> list = zk.getChildren(root, true);
+                if (list.size() == 0) {
+                    System.out.println("Esperando votos");
+                    mutex.wait();
+                } else {
+                    String minString = list.get(0);
+                    System.out.println("Temporary value: " + root +"/"+ minString);
+                    byte[] b = zk.getData(root +"/"+ minString,false, stat);
+                    //System.out.println("b: " + Arrays.toString(b)); 	
+                    //zk.delete(root +"/"+ minString, 0);
+                    //ByteBuffer buffer = ByteBuffer.wrap(b);
+                    retvalue = new String (b);
+                    return retvalue;
+                }
+            }
+        }
+    }
+
+    void resetVotos(String ip) throws KeeperException, InterruptedException{
+        String retvalue = "";
+        Stat stat = null;
+        // Get the first element available
+        while (true) {
+            synchronized (mutex) {
+                List<String> list = zk.getChildren(root, true);
+                if (list.size() == 0) {
+                    produce("0");
+                } else {
+                    System.out.println("List: "+list.toString());
+                    String minString = list.get(0);
+                    System.out.println("Temporary value: " + root +"/"+ minString);
+                    zk.delete(root +"/" + minString, 0);
+                    produce("0");
+                    return;
+                }
+            }
+        }
+    }
+
     public static String lerPergunta(String ip) {
-        Queue q = new Queue(ip, "/app3");
-        System.out.println("Consumer");
+        Queue q = new Queue(ip, "/app3/pergunta");
         try{
             String r = q.consume();
             System.out.println("Item: " + r);
@@ -121,8 +156,7 @@ public class Queue extends SyncPrimitive {
     }
 
     public static void perguntar(String ip, String pergunta) {
-        Queue q = new Queue(ip, "/app3");
-        System.out.println("Producer");
+        Queue q = new Queue(ip, "/app3/pergunta");
         try{
             q.produce(pergunta);
         } catch (KeeperException e){
@@ -130,5 +164,28 @@ public class Queue extends SyncPrimitive {
         } catch (InterruptedException e){
         e.printStackTrace();
         }
+    }
+
+    public static void resetarVotos(String ip) {
+        Queue q = new Queue(ip, "/app3/votos");
+        try {
+            q.resetVotos(ip);
+        } catch (KeeperException e){
+            e.printStackTrace();
+        } catch (InterruptedException e){
+        e.printStackTrace();
+        }
+    }
+
+    public static int lerVotos(String ip) {
+        Queue q = new Queue(ip, "/app3/votos");
+        try {
+            return Integer.parseInt(q.lerVotos());
+        } catch (KeeperException e){
+            e.printStackTrace();
+        } catch (InterruptedException e){
+        e.printStackTrace();
+        }
+        return -1;
     }
 }

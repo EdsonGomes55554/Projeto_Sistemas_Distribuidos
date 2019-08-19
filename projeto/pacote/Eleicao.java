@@ -167,6 +167,7 @@ public class Eleicao implements Watcher {
             String pergunta = scanner.nextLine();
             System.out.println("Pergunta: "+ pergunta);
             Queue.perguntar(ip, pergunta);
+            Queue.resetarVotos(ip);
     		//System.exit(0);
         }
     }
@@ -175,6 +176,7 @@ public class Eleicao implements Watcher {
         System.out.println("Responda a pergunta");
         String pergunta = Queue.lerPergunta(ip);
         System.out.println(pergunta);
+        System.out.println("Votos: "+ Queue.lerVotos(ip));
     }
 
 
