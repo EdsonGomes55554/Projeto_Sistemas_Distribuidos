@@ -29,7 +29,7 @@ public class Queue extends SyncPrimitive {
      * @param name
      */
 
-    static Barrier barrier;
+    Barrier barrier;
 
     Queue(String address, String name) {
         super(address);
@@ -149,13 +149,12 @@ public class Queue extends SyncPrimitive {
         String minString = list.get(0);
         zk.delete(root +"/" + minString, 0);
         produce(String.valueOf(votos));
-        new Thread().sleep(10000);
         lock.unlock();
-        termina();
+        termina(voto);
     }
 
     public void votar(String resposta, int numJogadores) {
-        barrier = new Barrier(address, "/b", new Integer(3));
+        barrier = new Barrier(address, "/b1", numJogadores);
 
         
         Trava lock = new Trava(address,"/lock", this, resposta);
@@ -179,20 +178,22 @@ public class Queue extends SyncPrimitive {
         }
     }
 
-    public void termina() {
-
-        System.out.println("Maioria: "+ getVotos());
+    public void termina(int voto) {
 
         try{
             barrier.leave();
-        } catch (KeeperException e){
+            int maioria = getVotos();
+            System.out.println("Maioria: "+ getVotos());
+            if((voto == 1 && maioria > 0) || (voto == -1 && maioria < 0)) {
 
+            }
+        } catch (KeeperException e){
+            e.printStackTrace();
         } catch (InterruptedException e){
+            e.printStackTrace();
         }
         System.out.println("Left barrier");
     }
-
-
 
     public String lerPergunta() {
         try{

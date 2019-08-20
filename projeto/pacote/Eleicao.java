@@ -46,7 +46,6 @@ public class Eleicao implements Watcher {
 
     synchronized public void process(WatchedEvent event) {
         synchronized (mutex) {
-            //System.out.println("Process: " + event.getType());
             mutex.notify();
         }
     }
@@ -81,7 +80,6 @@ public class Eleicao implements Watcher {
                     Stat s2 = zk.exists(leader, false);
                     if (s2 != null) {
                         byte[] idLeader = zk.getData(leader, false, s2);
-                        System.out.println("Current leader with id: "+new String(idLeader));
                     }  
                     
                 } catch (KeeperException e) {
@@ -105,7 +103,6 @@ public class Eleicao implements Watcher {
         		String minString = list.get(0);
         		for(String s : list){
         			Integer tempValue = new Integer(s.substring(5));
-        			//System.out.println("Temp value: " + tempValue);
         			if(tempValue < min)  {
         				min = tempValue;
         				minString = s;
@@ -119,7 +116,6 @@ public class Eleicao implements Watcher {
         		String maxString = minString;
         		for(String s : list){
         			Integer tempValue = new Integer(s.substring(5));
-        			//System.out.println("Temp value: " + tempValue);
         			if(tempValue > max && tempValue < suffix)  {
         				max = tempValue;
         				maxString = s;
@@ -162,20 +158,25 @@ public class Eleicao implements Watcher {
         }
         
         void fazerPergunta(String ip) {
-            System.out.println("Faca uma pergunta");
-            String pergunta = scanner.nextLine();
-            qPergunta.perguntar(pergunta);
-            qVotos.resetarVotos();
-            System.out.println("Agora responda a pergunta");
-            responder();
-    		//System.exit(0);
+            //while(true) {
+                System.out.println("Faca uma pergunta");
+                String pergunta = scanner.nextLine();
+                qPergunta.perguntar(pergunta);
+                qVotos.resetarVotos();
+                System.out.println("Agora responda a pergunta");
+                responder();
+            //}
+            
         }
     }
     
     static void ler(String ip) {
-        String pergunta = qPergunta.lerPergunta();
-        System.out.println(pergunta);
-        responder();
+        //while(true) {
+            String pergunta = qPergunta.lerPergunta();
+            System.out.println(pergunta);
+            responder();
+        //}
+        
     }
 
     static void responder() {

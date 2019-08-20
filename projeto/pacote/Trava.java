@@ -56,7 +56,6 @@ public class Trava extends SyncPrimitive {
     boolean lock() throws KeeperException, InterruptedException{
         //Step 1
         pathName = zk.create(root + "/lock-", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
-        System.out.println("My path name is: "+pathName);
         //Steps 2 to 5
 
         sucesso = testMin();
@@ -74,7 +73,6 @@ public class Trava extends SyncPrimitive {
                 //Step 2 
                     List<String> list = zk.getChildren(root, false);
                     Integer min = new Integer(list.get(0).substring(5));
-                    System.out.println("List: "+list.toString());
                     String minString = list.get(0);
                     for(String s : list){
                         Integer tempValue = new Integer(s.substring(5));
@@ -84,10 +82,8 @@ public class Trava extends SyncPrimitive {
                             minString = s;
                         }
                     }
-                System.out.println("Suffix: "+suffix+", min: "+min);
                 //Step 3
                     if (suffix.equals(min)) {
-                    System.out.println("Trava acquired for "+minString+"!");
                     return true;
                 }
                 //Step 4
@@ -96,7 +92,6 @@ public class Trava extends SyncPrimitive {
                 String maxString = minString;
                 for(String s : list){
                     Integer tempValue = new Integer(s.substring(5));
-                    //System.out.println("Temp value: " + tempValue);
                     if(tempValue > max && tempValue < suffix)  {
                         max = tempValue;
                         maxString = s;
@@ -104,14 +99,12 @@ public class Trava extends SyncPrimitive {
                 }
                 //Exists with watch
                 Stat s = zk.exists(root+"/"+maxString, this);
-                System.out.println("Watching "+root+"/"+maxString);
                 //Step 5
                 if (s != null) {
                     //Wait for notification
                     break;  
                 }
         }
-        System.out.println(pathName+" is waiting for a notification!");
             return false;
     }
 
@@ -121,9 +114,9 @@ public class Trava extends SyncPrimitive {
         synchronized (mutex) {
             String path = event.getPath();
             if (event.getType() == Event.EventType.NodeDeleted) {
-                System.out.println("Notification from "+path);
         try {
             if (testMin()) { //Step 5 (cont.) -> go to step 2 to check
+            System.out.println("Peguei a trava");
             this.compute();
             } else {
             System.out.println("Not lowest sequence number! Waiting for a new notification.");
@@ -134,7 +127,6 @@ public class Trava extends SyncPrimitive {
     }
 
     void compute() {
-        System.out.println("Lock acquired!");
         try {
             qVotos.votar(resposta, this);
         } catch (Exception e) {

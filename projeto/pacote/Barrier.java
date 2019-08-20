@@ -54,6 +54,8 @@ public class Barrier extends SyncPrimitive{
         } catch (UnknownHostException e) {
             System.out.println(e.toString());
         }
+        
+
 
     }
 
@@ -66,8 +68,10 @@ public class Barrier extends SyncPrimitive{
      */
 
     boolean enter() throws KeeperException, InterruptedException{
-        zk.create(root + "/" + name, new byte[0], Ids.OPEN_ACL_UNSAFE,
+        name = zk.create(root + "/" + name, new byte[0], Ids.OPEN_ACL_UNSAFE,
                 CreateMode.EPHEMERAL_SEQUENTIAL);
+        List<String> list2 = zk.getChildren(root, true);
+        System.out.println("List: "+list2.toString());
         while (true) {
             synchronized (mutex) {
                 List<String> list = zk.getChildren(root, true);
@@ -90,13 +94,18 @@ public class Barrier extends SyncPrimitive{
      */
 
     boolean leave() throws KeeperException, InterruptedException{
-        zk.delete(root + "/" + name, 0);
+        List<String> list2 = zk.getChildren(root, true);
+        System.out.println("List: "+list2.toString());
+        zk.delete(name, 0);
+        
         while (true) {
+            System.out.println("aaaaaaaa");
             synchronized (mutex) {
                 List<String> list = zk.getChildren(root, true);
                     if (list.size() > 0) {
-                        mutex.wait();
+
                     } else {
+                        System.out.println("return true");
                         return true;
                     }
                 }
