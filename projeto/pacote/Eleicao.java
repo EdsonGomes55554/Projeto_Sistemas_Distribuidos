@@ -217,9 +217,9 @@ public class Eleicao extends SyncPrimitive implements Watcher {
     }
 
     public static void startQueues() {
-        qVotos = new Queue(endereco, "/app3/votos");
-        qPergunta = new Queue(endereco, "/app3/pergunta");
-        qPerdedores = new Queue(endereco, "/app3/perdedores");
+        qVotos = new Queue(endereco, "/projeto/votos");
+        qPergunta = new Queue(endereco, "/projeto/perguntas");
+        qPerdedores = new Queue(endereco, "/projeto/perdedores");
     }
 
     public static void main(String args[]) {

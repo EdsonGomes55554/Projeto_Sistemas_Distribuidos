@@ -39,8 +39,8 @@ public class Queue extends SyncPrimitive {
         if (zk != null) {
             try {
                 Stat s = zk.exists(root, false);
-                
                 if (s == null) {
+                    System.out.println("aaaaaa");
                     zk.create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
             } catch (KeeperException e) {
