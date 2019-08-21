@@ -35,8 +35,12 @@ public class Barrier extends SyncPrimitive{
         // Create barrier node
         if (zk != null) {
             try {
-                Stat s = zk.exists(root, false);
+                Stat s = zk.exists(root, true);
                 if (s == null) {
+                    zk.create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                }
+                if (s != null) {
+                    zk.delete(root,true);
                     zk.create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
             } catch (KeeperException e) {
@@ -97,6 +101,7 @@ public class Barrier extends SyncPrimitive{
             synchronized (mutexB) {
                 List<String> list = zk.getChildren(root, true);
                     if (list.size() > 0) {
+                        System.
                         mutexB.wait();
                     } else {
                         return true;

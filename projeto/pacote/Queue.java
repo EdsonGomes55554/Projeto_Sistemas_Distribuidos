@@ -188,7 +188,7 @@ public class Queue extends SyncPrimitive {
     public void termina(int voto) {
 
         try{
-            barrier.enter();
+            barrier.enter(); // aqui
             int maioria = getVotos();
             if(maioria > 0) {
                 System.out.println("A Maioria votou sim!");
@@ -211,12 +211,15 @@ public class Queue extends SyncPrimitive {
         System.out.println("Left barrier");
     }
 
-    public void deletaPergunta() {
+    public void deletaPergunta() { // retira o catch ai
         try{
             List<String> list = zk.getChildren(root, true);
             if(list.size() != 0) {
                 String minString = list.get(0);
-                zk.delete(root +"/"+ minString, 0);
+                Stat s = zk.exists(root +"/"+ minString, false);
+                if (s != null){
+                    zk.delete(root +"/"+ minString, 0);
+                }
             }
         } catch (KeeperException e){
         } catch (InterruptedException e){

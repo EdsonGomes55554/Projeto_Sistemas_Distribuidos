@@ -81,29 +81,8 @@ public class Trava extends SyncPrimitive {
                     if (suffix.equals(min)) {
                     return true;
                 }
-                //Step 4
-                //Wait for the removal of the next lowest sequence number
-                Integer max = min;
-                String maxString = minString;
-                for(String s : list){
-                    Integer tempValue = new Integer(s.substring(5));
-                    if(tempValue > max && tempValue < suffix)  {
-                        max = tempValue;
-                        maxString = s;
-                    }
-                }
-                //Exists with watch
-                Stat s = zk.exists(root+"/"+maxString, this);
-                //Step 5
-                if (s == null) {
-                    //Wait for notification
-                    break;
-                }
         }
-            return false;
-    }
-
-    
+    }    
 
     synchronized public void process(WatchedEvent event) {
         synchronized (mutexL) {

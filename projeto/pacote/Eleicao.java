@@ -95,7 +95,7 @@ public class Eleicao extends SyncPrimitive implements Watcher {
         }
         
         boolean check() throws KeeperException, InterruptedException{
-        	Integer suffix = new Integer(pathName.substring(12));
+        	Integer suffix = new Integer(pathName.substring(21));
            	while (true) {
         		List<String> list = zk.getChildren(root, false);
         		Integer min = new Integer(list.get(0).substring(5));
@@ -110,26 +110,8 @@ public class Eleicao extends SyncPrimitive implements Watcher {
         		if (suffix.equals(min)) {
         			this.leader();
         			return true;
-        		}
-        		Integer max = min;
-        		String maxString = minString;
-        		for(String s : list){
-        			Integer tempValue = new Integer(s.substring(5));
-        			if(tempValue > max && tempValue < suffix)  {
-        				max = tempValue;
-        				maxString = s;
-        			}
-        		}
-        		//Exists with watch
-        		Stat s = zk.exists(root+"/"+maxString, this);
-        		//Step 5
-        		if (s != null) {
-        			//Wait for notification
-        			break;
-        		}
+                }
         	}
-        	return false;
-        	
         }
         
         synchronized public void process(WatchedEvent event) {
@@ -192,7 +174,9 @@ public class Eleicao extends SyncPrimitive implements Watcher {
     }
 
     public static int getNumJogadores() {
+        System.out.println(numJogadoresMax -  qPerdedores.getNumPerdedores());
         return numJogadoresMax - qPerdedores.getNumPerdedores();
+
     }
     
     static void ler(String ip) {
@@ -229,7 +213,7 @@ public class Eleicao extends SyncPrimitive implements Watcher {
         int r = rand.nextInt(1000000);
         startQueues();
         qPerdedores.resetNumPerdedores();
-    	Leader leader = new Leader(endereco,"/election","/leader",r);
+    	Leader leader = new Leader(endereco,"/projeto/election","/projeto/leader",r);
         try{
             boolean success = leader.elect();
             souLider = success;
