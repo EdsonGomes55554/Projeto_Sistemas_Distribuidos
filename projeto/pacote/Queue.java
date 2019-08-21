@@ -30,6 +30,7 @@ public class Queue extends SyncPrimitive {
      */
 
     Barrier barrier;
+    
 
     Queue(String address, String name) {
         super(address);
@@ -38,6 +39,7 @@ public class Queue extends SyncPrimitive {
         if (zk != null) {
             try {
                 Stat s = zk.exists(root, false);
+                
                 if (s == null) {
                     zk.create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
@@ -62,6 +64,12 @@ public class Queue extends SyncPrimitive {
         return true;
     }
 
+    boolean produceNaoEfemero(String i) throws KeeperException, InterruptedException{
+        byte[] value = i.getBytes();
+        zk.create(root + "/", value, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
+        return true;
+    }
+
 
     /**
      * Remove first element from the queue.
@@ -76,11 +84,11 @@ public class Queue extends SyncPrimitive {
 
         // Get the first element available
         while (true) {
-            synchronized (mutex) {
+            synchronized (mutexQ) {
                 List<String> list = zk.getChildren(root, true);
                 if (list.size() == 0) {
                     System.out.println("Esperando pergunta");
-                    mutex.wait();
+                    mutexQ.wait();
                 } else {
                     String minString = list.get(0);
                     byte[] b = zk.getData(root +"/"+ minString,false, stat);
@@ -100,10 +108,10 @@ public class Queue extends SyncPrimitive {
 
         // Get the first element available
         while (true) {
-            synchronized (mutex) {
+            synchronized (mutexQ) {
                 List<String> list = zk.getChildren(root, true);
                 if (list.size() == 0) {
-                    mutex.wait();
+                    mutexQ.wait();
                 } else {
                     String minString = list.get(0);
                     byte[] b = zk.getData(root +"/"+ minString,false, stat);
@@ -122,7 +130,7 @@ public class Queue extends SyncPrimitive {
         Stat stat = null;
         // Get the first element available
         while (true) {
-            synchronized (mutex) {
+            synchronized (mutexQ) {
                 List<String> list = zk.getChildren(root, true);
                 if (list.size() == 0) {
                     produce("0");
@@ -159,9 +167,8 @@ public class Queue extends SyncPrimitive {
         
         Trava lock = new Trava(address,"/lock", this, resposta);
         try{
-            barrier.enter();
-            boolean success = lock.lock();
             
+            boolean success = lock.lock();
             if (success) {
                 System.out.println("Estou com a lock");
                 
@@ -170,7 +177,7 @@ public class Queue extends SyncPrimitive {
                 while(true) {
 
                 }
-            }         
+            }       
         } catch (KeeperException e){
             e.printStackTrace();
         } catch (InterruptedException e){
@@ -181,18 +188,104 @@ public class Queue extends SyncPrimitive {
     public void termina(int voto) {
 
         try{
-            barrier.leave();
+            barrier.enter();
             int maioria = getVotos();
-            System.out.println("Maioria: "+ getVotos());
-            if((voto == 1 && maioria > 0) || (voto == -1 && maioria < 0)) {
-
+            if(maioria > 0) {
+                System.out.println("A Maioria votou sim!");
+            } else if(maioria == 0) {
+                System.out.println("Empate!");
+            } else {
+                System.out.println("A Maioria votou nao!");
             }
+            resetPergunta();
+            if((voto == 1 && maioria < 0) || (voto == -1 && maioria > 0)) {
+                leave();
+            }
+            barrier.leave();
+            
         } catch (KeeperException e){
             e.printStackTrace();
         } catch (InterruptedException e){
             e.printStackTrace();
         }
         System.out.println("Left barrier");
+    }
+
+    public void deletaPergunta() {
+        try{
+            List<String> list = zk.getChildren(root, true);
+            if(list.size() != 0) {
+                String minString = list.get(0);
+                zk.delete(root +"/"+ minString, 0);
+            }
+        } catch (KeeperException e){
+        } catch (InterruptedException e){
+        }
+    }
+
+
+    public void leave() {
+        System.out.println("Voce perdeu!");
+        qPerdedores.somar();
+        System.exit(0);
+    }
+
+    public void somar() {
+        try{
+            Stat stat = null;
+            List<String> list = zk.getChildren(root, true);
+            if(list.size() == 0) {
+                produceNaoEfemero("1");
+            } else {
+                String minString = list.get(0);
+                byte[] b = zk.getData(root +"/"+ minString,false, stat);
+                int n = Integer.parseInt(new String (b));
+                zk.delete(root +"/"+ minString, 0);
+                produceNaoEfemero(String.valueOf(n + 1));
+            }
+        } catch (KeeperException e){
+            e.printStackTrace();
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void resetNumPerdedores() {
+        try{
+            Stat stat = null;
+            List<String> list = zk.getChildren(root, true);
+            if(list.size() != 0) {
+                String minString = list.get(0);
+                byte[] b = zk.getData(root +"/"+ minString,false, stat);
+                zk.delete(root +"/"+ minString, 0);
+            }
+            produceNaoEfemero("0");
+        } catch (KeeperException e){
+            e.printStackTrace();
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        }
+        
+    }
+
+    public int getNumPerdedores() {
+        try{
+            Stat stat = null;
+            List<String> list = zk.getChildren(root, true);
+            if(list.size() == 0) {
+                produce("0");
+                return 0;
+            }
+            String minString = list.get(0);
+            byte[] b = zk.getData(root +"/"+ minString,false, stat);
+            int n = Integer.parseInt(new String (b));
+            return n;
+        } catch (KeeperException e){
+            e.printStackTrace();
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        }
+        return -1;
     }
 
     public String lerPergunta() {
@@ -206,6 +299,7 @@ public class Queue extends SyncPrimitive {
         }
         return "Não foi possivel ler a pergunta.";
     }
+
 
     public void perguntar(String pergunta) {
         try{

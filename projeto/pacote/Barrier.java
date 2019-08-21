@@ -70,14 +70,11 @@ public class Barrier extends SyncPrimitive{
     boolean enter() throws KeeperException, InterruptedException{
         name = zk.create(root + "/" + name, new byte[0], Ids.OPEN_ACL_UNSAFE,
                 CreateMode.EPHEMERAL_SEQUENTIAL);
-        List<String> list2 = zk.getChildren(root, true);
-        System.out.println("List: "+list2.toString());
         while (true) {
-            synchronized (mutex) {
+            synchronized (mutexB) {
                 List<String> list = zk.getChildren(root, true);
-
                 if (list.size() < size) {
-                    mutex.wait();
+                    mutexB.wait();
                 } else {
                     return true;
                 }
@@ -93,19 +90,15 @@ public class Barrier extends SyncPrimitive{
      * @throws InterruptedException
      */
 
+
     boolean leave() throws KeeperException, InterruptedException{
-        List<String> list2 = zk.getChildren(root, true);
-        System.out.println("List: "+list2.toString());
         zk.delete(name, 0);
-        
         while (true) {
-            System.out.println("aaaaaaaa");
-            synchronized (mutex) {
+            synchronized (mutexB) {
                 List<String> list = zk.getChildren(root, true);
                     if (list.size() > 0) {
-
+                        mutexB.wait();
                     } else {
-                        System.out.println("return true");
                         return true;
                     }
                 }

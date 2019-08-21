@@ -17,38 +17,37 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
-public class Eleicao implements Watcher {
+public class Eleicao extends SyncPrimitive implements Watcher {
 
     static ZooKeeper zk = null;
-    static Integer mutex;
-    static Queue qVotos;
-    static Queue qPergunta;
-    static int numJogadores = 4;
-    static Scanner scanner;
-
-
+    
+    static boolean souLider;
     String root;
+    static String endereco;
+
+
 
     Eleicao(String address) {
+        super(address);
         if(zk == null){
             try {
                 System.out.println("Starting ZK:");
                 zk = new ZooKeeper(address, 3000, this);
-                mutex = new Integer(-1);
+                
                 System.out.println("Finished starting ZK: " + zk);
             } catch (IOException e) {
                 System.out.println(e.toString());
                 zk = null;
             }
         }
-        //else mutex = new Integer(-1);
+        //else mutexE = new Integer(-1);
     }
 
-    synchronized public void process(WatchedEvent event) {
-        synchronized (mutex) {
-            mutex.notify();
+    /*synchronized public void process(WatchedEvent event) {
+        synchronized (mutexE) {
+            mutexE.notify();
         }
-    }
+    }*/
 
     static public class Leader extends Eleicao {
     	String leader;
@@ -134,21 +133,34 @@ public class Eleicao implements Watcher {
         }
         
         synchronized public void process(WatchedEvent event) {
-            synchronized (mutex) {
+            synchronized (mutexQ) {
             	if (event.getType() == Event.EventType.NodeDeleted) {
             		try {
             			boolean success = check();
             			if (success) {
-            				fazerPergunta("localhost");
+            				fazerPergunta(endereco);
             			}
             		} catch (Exception e) {e.printStackTrace();}
             	}
+            }
+            synchronized (mutexB) {
+                //System.out.println("Process: " + event.getType());
+                mutexB.notifyAll();
+            }
+            synchronized (mutexL) {
+                //System.out.println("Process: " + event.getType());
+                mutexL.notify();
+            }
+            synchronized (mutexE) {
+                //System.out.println("Process: " + event.getType());
+                mutexE.notify();
             }
         }
         
         void leader() throws KeeperException, InterruptedException {
 			System.out.println("Voce e o lider!");
             //Create leader znode
+            souLider = true;
             Stat s2 = zk.exists(leader, false);
             if (s2 == null) {
                 zk.create(leader, id.getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
@@ -158,51 +170,76 @@ public class Eleicao implements Watcher {
         }
         
         void fazerPergunta(String ip) {
-            //while(true) {
+            while(true) {
+                verificaVitoria();
                 System.out.println("Faca uma pergunta");
+                Scanner scanner = new Scanner(System.in);
                 String pergunta = scanner.nextLine();
                 qPergunta.perguntar(pergunta);
                 qVotos.resetarVotos();
                 System.out.println("Agora responda a pergunta");
                 responder();
-            //}
+            }
             
         }
     }
+
+    public static void verificaVitoria() {
+        if(getNumJogadores() <= 2) {
+            System.out.println("Parabens, voce ganhou!");
+            System.exit(0);
+        }
+    }
+
+    public static int getNumJogadores() {
+        return numJogadoresMax - qPerdedores.getNumPerdedores();
+    }
     
     static void ler(String ip) {
-        //while(true) {
-            String pergunta = qPergunta.lerPergunta();
-            System.out.println(pergunta);
-            responder();
-        //}
+        while(true) {
+            if(!souLider) {
+                verificaVitoria();
+                String pergunta = qPergunta.lerPergunta();
+                System.out.println(pergunta);
+                responder();
+            } else {
+                break;
+            }
+            
+        }
         
     }
 
     static void responder() {
+        Scanner scanner = new Scanner(System.in);
         String resposta = scanner.nextLine();
-        qVotos.votar(resposta, numJogadores);
+        qVotos.votar(resposta, getNumJogadores());
     }
 
-
+    public static void startQueues() {
+        qVotos = new Queue(endereco, "/app3/votos");
+        qPergunta = new Queue(endereco, "/app3/pergunta");
+        qPerdedores = new Queue(endereco, "/app3/perdedores");
+    }
 
     public static void main(String args[]) {
         // Generate random integer
-        scanner = new Scanner(System.in);
+        endereco = args[0];
         Random rand = new Random();
         int r = rand.nextInt(1000000);
-        qVotos = new Queue(args[0], "/app3/votos");
-        qPergunta = new Queue(args[0], "/app3/pergunta");
-    	Leader leader = new Leader(args[0],"/election","/leader",r);
+        startQueues();
+        qPerdedores.resetNumPerdedores();
+    	Leader leader = new Leader(endereco,"/election","/leader",r);
         try{
-        	boolean success = leader.elect();
+            boolean success = leader.elect();
+            souLider = success;
         	if (success) {
-                leader.fazerPergunta(args[0]);
+                leader.fazerPergunta(endereco);
                 while(true) {
 
                 }
         	} else {
-                ler(args[0]);
+                ler(endereco);
         		while(true) {
         			//Waiting for a notification
         		}
