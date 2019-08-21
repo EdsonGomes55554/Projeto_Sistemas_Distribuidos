@@ -39,8 +39,8 @@ public class Queue extends SyncPrimitive {
         if (zk != null) {
             try {
                 Stat s = zk.exists(root, false);
+                
                 if (s == null) {
-                    System.out.println("aaaaaa");
                     zk.create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
             } catch (KeeperException e) {
@@ -170,7 +170,7 @@ public class Queue extends SyncPrimitive {
             
             boolean success = lock.lock();
             if (success) {
-                System.out.println("Estou com a lock");
+                //System.out.println("Estou com a lock");
                 
                 lock.compute();
             } else {
@@ -188,7 +188,7 @@ public class Queue extends SyncPrimitive {
     public void termina(int voto) {
 
         try{
-            barrier.enter(); // aqui
+            barrier.enter();
             int maioria = getVotos();
             if(maioria > 0) {
                 System.out.println("A Maioria votou sim!");
@@ -208,18 +208,14 @@ public class Queue extends SyncPrimitive {
         } catch (InterruptedException e){
             e.printStackTrace();
         }
-        System.out.println("Left barrier");
     }
 
-    public void deletaPergunta() { // retira o catch ai
+    public void deletaPergunta() {
         try{
             List<String> list = zk.getChildren(root, true);
             if(list.size() != 0) {
                 String minString = list.get(0);
-                Stat s = zk.exists(root +"/"+ minString, false);
-                if (s != null){
-                    zk.delete(root +"/"+ minString, 0);
-                }
+                zk.delete(root +"/"+ minString, 0);
             }
         } catch (KeeperException e){
         } catch (InterruptedException e){

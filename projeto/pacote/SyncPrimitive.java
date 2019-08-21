@@ -47,15 +47,16 @@ public class SyncPrimitive implements Watcher {
                 if(s==null){
                     zk.create("/projeto", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
+                System.out.println("Finished starting ZK: " + zk);
             } catch (IOException e) {
                 System.out.println(e.toString());
                 zk = null;
+            }catch (InterruptedException e) {
+                System.out.println("Interrupted exception");
             }catch (KeeperException e) {
                 System.out
                         .println("Keeper exception when instantiating queue: "
                                 + e.toString());
-            } catch (InterruptedException e) {
-                System.out.println("Interrupted exception");
             }
         }
         //else mutex = new Integer(-1);

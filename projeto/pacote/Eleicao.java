@@ -95,7 +95,7 @@ public class Eleicao extends SyncPrimitive implements Watcher {
         }
         
         boolean check() throws KeeperException, InterruptedException{
-        	Integer suffix = new Integer(pathName.substring(21));
+        	Integer suffix = new Integer(pathName.substring(12));
            	while (true) {
         		List<String> list = zk.getChildren(root, false);
         		Integer min = new Integer(list.get(0).substring(5));
@@ -137,9 +137,6 @@ public class Eleicao extends SyncPrimitive implements Watcher {
             	if (event.getType() == Event.EventType.NodeDeleted) {
             		try {
             			boolean success = check();
-            			if (success) {
-            				fazerPergunta(endereco);
-            			}
             		} catch (Exception e) {e.printStackTrace();}
             	}
             }
@@ -192,9 +189,7 @@ public class Eleicao extends SyncPrimitive implements Watcher {
     }
 
     public static int getNumJogadores() {
-        System.out.println(numJogadoresMax -  qPerdedores.getNumPerdedores());
         return numJogadoresMax - qPerdedores.getNumPerdedores();
-
     }
     
     static void ler(String ip) {
@@ -220,7 +215,7 @@ public class Eleicao extends SyncPrimitive implements Watcher {
 
     public static void startQueues() {
         qVotos = new Queue(endereco, "/projeto/votos");
-        qPergunta = new Queue(endereco, "/projeto/perguntas");
+        qPergunta = new Queue(endereco, "/projeto/pergunta");
         qPerdedores = new Queue(endereco, "/projeto/perdedores");
     }
 
@@ -231,20 +226,18 @@ public class Eleicao extends SyncPrimitive implements Watcher {
         int r = rand.nextInt(1000000);
         startQueues();
         qPerdedores.resetNumPerdedores();
-    	Leader leader = new Leader(endereco,"/projeto/election","/projeto/leader",r);
+    	Leader leader = new Leader(endereco,"/election","/leader",r);
         try{
             boolean success = leader.elect();
             souLider = success;
         	if (success) {
                 leader.fazerPergunta(endereco);
-                while(true) {
-
-                }
         	} else {
                 ler(endereco);
-        		while(true) {
-        			//Waiting for a notification
-        		}
+                if(souLider) {
+                    leader = new Leader(endereco,"/election","/leader",r);
+                    leader.fazerPergunta(endereco);
+                }
             }         
         } catch (KeeperException e){
         	e.printStackTrace();
