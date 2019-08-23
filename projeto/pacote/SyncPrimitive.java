@@ -30,8 +30,9 @@ public class SyncPrimitive implements Watcher {
 
     String address;
     String root;
+    static boolean souLider;
 
-    public static int numJogadoresMax = 4;
+    public static int numJogadoresMax;
 
     SyncPrimitive(String address) {
         if(zk == null){

@@ -18,10 +18,8 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
 public class Eleicao extends SyncPrimitive implements Watcher {
-
-    static ZooKeeper zk = null;
     
-    static boolean souLider;
+    
     String root;
     static String endereco;
 
@@ -197,14 +195,15 @@ public class Eleicao extends SyncPrimitive implements Watcher {
             if(!souLider) {
                 verificaVitoria();
                 String pergunta = qPergunta.lerPergunta();
+                if(souLider) {
+                    break;
+                }
                 System.out.println(pergunta);
                 responder();
             } else {
                 break;
             }
-            
         }
-        
     }
 
     static void responder() {
@@ -222,6 +221,7 @@ public class Eleicao extends SyncPrimitive implements Watcher {
     public static void main(String args[]) {
         // Generate random integer
         endereco = args[0];
+        numJogadoresMax = Integer.parseInt(args[1]);
         Random rand = new Random();
         int r = rand.nextInt(1000000);
         startQueues();

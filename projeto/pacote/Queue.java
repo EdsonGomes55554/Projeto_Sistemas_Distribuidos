@@ -87,6 +87,9 @@ public class Queue extends SyncPrimitive {
             synchronized (mutexQ) {
                 List<String> list = zk.getChildren(root, true);
                 if (list.size() == 0) {
+                    if(souLider) {
+                        return "";
+                    }
                     System.out.println("Esperando pergunta");
                     mutexQ.wait();
                 } else {
@@ -270,7 +273,7 @@ public class Queue extends SyncPrimitive {
     public int getNumPerdedores() {
         try{
             Stat stat = null;
-            List<String> list = zk.getChildren(root, true);
+            List<String> list = zk.getChildren(root, false);
             if(list.size() == 0) {
                 produce("0");
                 return 0;
