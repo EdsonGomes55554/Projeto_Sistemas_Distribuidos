@@ -26,12 +26,12 @@ public class Eleicao extends SyncPrimitive{
     String root;
 
     static boolean souLider;
+    static Queue qJogadores;
     static Queue qPalavraEscondida;
     static Queue qPalavra;
     static Queue qLetraEscolhida;
     static Queue qRespostaLider;
     static Barrier b1 ;
-
 
     Eleicao(String address) {
         super(address);
@@ -47,20 +47,13 @@ public class Eleicao extends SyncPrimitive{
         }
     }
  
-    static void ler(String ip)  throws KeeperException, InterruptedException {
-        String palavraImp = qPalavraEscondida.lerPalavra();
-        while(palavraImp == null){
-            palavraImp = qPalavraEscondida.lerPalavra();
-        }
-        System.out.println(palavraImp);
+    static void ler()  throws KeeperException, InterruptedException {
         while(true) {
-            if(!souLider) {
-                b1.enter();
-                responder();
-                b1.leave();
-                palavraImp = qPalavraEscondida.lerPalavra();
-                System.out.println(palavraImp);
-            }  
+            String palavraImp = qPalavraEscondida.lerPalavra();
+            System.out.println(palavraImp);
+            b1.enter();
+            responder(); 
+            b1.leave();
         } 
     }
 
@@ -80,7 +73,8 @@ public class Eleicao extends SyncPrimitive{
         qPalavraEscondida = new Queue(endereco, "/forca/palavraescodida");
         qLetraEscolhida = new Queue(endereco, "/forca/letraescolhida");
         qRespostaLider = new Queue(endereco, "/forca/respostalider");
-        b1 = new Barrier(endereco, "/forca/barreira", 2);
+        qJogadores = new Queue(endereco, "/forca/jogadores");
+        b1 = new Barrier(endereco, "/forca/barreira", 3);
     }
 
     public static void main(String args[]) {
@@ -93,12 +87,12 @@ public class Eleicao extends SyncPrimitive{
             boolean success = leader.elect();
             souLider = success;
         	if (success) {
-                leader.escolhePalavra(endereco);
+                leader.escolhePalavra();
         	} else {
-                ler(endereco);
+                ler();
                 if(souLider) {
                     leader = new Leader(endereco,"/forca/election","/forca/leader",r);
-                    leader.escolhePalavra(endereco);
+                    leader.escolhePalavra();
                 }
             }         
         } catch (KeeperException e){
@@ -111,31 +105,26 @@ public class Eleicao extends SyncPrimitive{
 
     static public class Leader extends Eleicao {
     	String leader;
-    	String id; //Id of the leader
+    	String id; 
         String pathName;
         String palavra = "";
         String palavraEscondida = "";
     	
-   	 
         Leader(String address, String name, String leader, int id) {
             super(address);
             this.root = name;
             this.leader = leader;
             this.id = new Integer(id).toString();
-            // Create ZK node name
             if (zk != null) {
                 try {
-                	//Create election znode
                     Stat s1 = zk.exists(root, false);
                     if (s1 == null) {
                         zk.create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                     }  
-                    //Checking for a leader
                     Stat s2 = zk.exists(leader, false);
                     if (s2 != null) {
                         byte[] idLeader = zk.getData(leader, false, s2);
                     }  
-                    
                 } catch (KeeperException e) {
                     System.out.println("Keeper exception when instantiating queue: " + e.toString());
                 } catch (InterruptedException e) {
@@ -175,11 +164,8 @@ public class Eleicao extends SyncPrimitive{
         				maxString = s;
         			}
         		}
-        		//Exists with watch
         		Stat s = zk.exists(root+"/"+maxString, this);
-        		//Step 5
         		if (s != null) {
-        			//Wait for notification
         			break;
         		}
         	}
@@ -198,7 +184,6 @@ public class Eleicao extends SyncPrimitive{
         
         void leader() throws KeeperException, InterruptedException {
 			System.out.println("Voce e o lider!");
-            //Create leader znode
             souLider = true;
             Stat s2 = zk.exists(leader, false);
             if (s2 == null) {
@@ -208,7 +193,7 @@ public class Eleicao extends SyncPrimitive{
             }
         }
         
-        void escolhePalavra(String address)  throws KeeperException, InterruptedException {
+        void escolhePalavra()  throws KeeperException, InterruptedException {
             if(qPalavra.estaVazia()){
                 System.out.println("Escolha a Palavra:");
                 Scanner scanner = new Scanner(System.in);
@@ -222,29 +207,35 @@ public class Eleicao extends SyncPrimitive{
             }
             while(true) {
                 b1.enter();
+                VerificaPalavra();
+                b1.leave();
+            }
+        }
+
+        void VerificaPalavra() throws KeeperException, InterruptedException{
+            while(!qLetraEscolhida.estaVazia()){
+                int acertos = 0;
                 String palavraTemp = "";
                 String resp = qLetraEscolhida.getLetraEscolhida();
-                if (resp != ""){
-                    for(int i = 0; i < palavra.length(); i++){
-                        if((qPalavra.lerPalavra()).charAt(i) == resp.charAt(0))
-                        {
-                            System.out.println(resp.charAt(0));
-                            palavraTemp+=resp.charAt(0);
-                        }else{
-                            palavraTemp+=(qPalavraEscondida.lerPalavra()).charAt(i);
-                        }
-                    }
-                    palavraEscondida = palavraTemp;
-                    System.out.println(palavraEscondida);
-                    if(palavraEscondida.equals(palavra)){
-                        //Codição de vitoria
+                for(int i = 0; i < palavra.length(); i++){
+                    if((qPalavra.lerPalavra()).charAt(i) == resp.charAt(0))
+                    {
+                        System.out.println(resp.charAt(0));
+                        palavraTemp+=resp.charAt(0);
+                        acertos++;
                     }else{
-                        qPalavraEscondida.consume();
-                        qPalavraEscondida.atualizaPalavra(palavraEscondida);
+                        palavraTemp+=(qPalavraEscondida.lerPalavra()).charAt(i);
                     }
-                    qLetraEscolhida.consume();
                 }
-                b1.leave();
+                palavraEscondida = palavraTemp;
+                System.out.println(palavraEscondida);
+                if(palavraEscondida.equals(palavra)){
+                    //Codição de vitoria
+                } else {
+                    qPalavraEscondida.consume();
+                    qPalavraEscondida.atualizaPalavra(palavraEscondida);
+                }
+                qLetraEscolhida.consume();
             }
         }
     }

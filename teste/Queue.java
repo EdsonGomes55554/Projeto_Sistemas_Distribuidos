@@ -25,7 +25,6 @@ public class Queue extends SyncPrimitive {
     Queue(String address, String name) {
         super(address);
         this.root = name;
-        // Create ZK node name
         if (zk != null) {
             try {
                 Stat s = zk.exists(root, false);
@@ -76,7 +75,6 @@ public class Queue extends SyncPrimitive {
         String retvalue = "";
         Stat stat = null;
         while (true) {
-            synchronized(mutex){
                 List<String> list = zk.getChildren(root, true);
                 if (list.size() != 0) {
                     String minString = list.get(0);
@@ -84,11 +82,11 @@ public class Queue extends SyncPrimitive {
                     retvalue = new String (b);
                     return retvalue;
                 } else {
-                    mutex.wait();
+                    return "";
                 }
             }
         }
-    }
+    
 
     public void retiraPalavra() {
         try{
