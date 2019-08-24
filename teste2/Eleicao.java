@@ -16,18 +16,17 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
+import pacote.Barrier;
+import pacote.Trava;
 
-public class Eleicao extends SyncPrimitive{
+public class Eleicao extends SyncPrimitive {
     
-    String root;
     static String endereco;
 
-    static Queue qVotos;
     static Queue qPergunta;
-    static Queue qPerdedores;
+    static Queue qPresentes;
     static Barrier barrier;
-
-    static boolean souLider;
+    static Leader leader;
 
     Eleicao(String address) {
         super(address);
@@ -45,59 +44,57 @@ public class Eleicao extends SyncPrimitive{
     }
     
     static void ler(String ip) throws KeeperException, InterruptedException{
-        while(true) {
-            if(!souLider) {
-                String pergunta = qPergunta.ler(souLider);
-                if(souLider) {
-                    break;
-                }
-                System.out.println(pergunta);
-                responder();
-            } else {
+        while(true) {   
+            System.out.println("Esperando Pergunta");
+            String pergunta = qPergunta.ler();
+            if(souLider) {
                 break;
+            }
+            System.out.println(pergunta);
+            responder();
+        }
+    }
+
+    static void responder() throws KeeperException, InterruptedException {
+        System.out.println("aaaaaa");
+        qPresentes.produce("1");
+        Scanner scanner = new Scanner(System.in);
+        String resposta = scanner.nextLine();
+        barrier = new Barrier(endereco, "/b2", qPresentes.tamanhoLista());
+        barrier.enter();
+            if(souLider && !qPergunta.estaVazio()){
+                qPergunta.consume();
+            }
+        barrier.leave();
+        if(souLider){
+            while(!qPresentes.estaVazio()){
+                qPresentes.consume();
             }
         }
     }
 
-    static void responder() {
-        try{
-            Scanner scanner = new Scanner(System.in);
-            String resposta = scanner.nextLine();
-            barrier = new Barrier(address, "/project/barrier", 2);
-            barrier.enter();
-            qVotos.votar(resposta, 2);
-            barrier.leave();
-        } catch (KeeperException e){
-            e.printStackTrace();
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
-    }
-
     public static void startQueues() {
-        qVotos = new Queue(endereco, "/project/votos");
-        qPergunta = new Queue(endereco, "/project/pergunta");
-        qPerdedores = new Queue(endereco, "/project/perdedores");
+        qPergunta = new Queue(endereco, "/projeto/pergunta");
+        qPresentes = new Queue(endereco, "/projeto/presentes");
     }
 
     public static void main(String args[]) {
+        // Generate random integer
         endereco = args[0];
         Random rand = new Random();
         int r = rand.nextInt(1000000);
         startQueues();
-    	Leader leader = new Leader(endereco,"/election","/leader",r);
+    	leader = new Leader(endereco,"/election","/leader",r);
         try{
             boolean success = leader.elect();
             souLider = success;
-        	if (success) {
-                leader.fazerPergunta(endereco);
-        	} else {
+        	if (!success) {
                 ler(endereco);
                 if(souLider) {
                     leader = new Leader(endereco,"/election","/leader",r);
-                    leader.fazerPergunta(endereco);
+                    leader.elect();
                 }
-            }         
+        	} 
         } catch (KeeperException e){
         	e.printStackTrace();
         } catch (InterruptedException e){

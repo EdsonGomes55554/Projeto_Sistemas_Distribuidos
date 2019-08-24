@@ -21,7 +21,9 @@ public class SyncPrimitive implements Watcher {
     static ZooKeeper zk = null;
     static Integer mutex;
     static String address;
-    static String root;
+    String root;
+    static boolean souLider;
+
 
     SyncPrimitive(String address) {
         if(zk == null){
@@ -30,9 +32,9 @@ public class SyncPrimitive implements Watcher {
                 System.out.println("Starting ZK:");
                 zk = new ZooKeeper(address, 3000, this);
                 mutex = new Integer(-1);
-                Stat s = zk.exists("/project", false);
+                Stat s = zk.exists("/projeto", false);
                 if(s==null){
-                    zk.create("/project", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                    zk.create("/projeto", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
                 System.out.println("Finished starting ZK: " + zk);
             } catch (IOException e) {
@@ -50,7 +52,7 @@ public class SyncPrimitive implements Watcher {
 
     synchronized public void process(WatchedEvent event) {
         synchronized (mutex) {
-            mutex.notify();
+            mutex.notifyAll();
         }
     }
 }

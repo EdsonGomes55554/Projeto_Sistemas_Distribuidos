@@ -17,17 +17,13 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 import pacote.Eleicao;
-import pacote.Barrier;
-import pacote.Trava;
 
 public class Queue extends SyncPrimitive {
-
-    Barrier barrier;
+    
 
     Queue(String address, String name) {
         super(address);
         this.root = name;
-
         if (zk != null) {
             try {
                 Stat s = zk.exists(root, false);
@@ -54,41 +50,59 @@ public class Queue extends SyncPrimitive {
             synchronized (mutex) {
                 List<String> list = zk.getChildren(root, true);
                 if (list.size() == 0) {
-                    System.out.println(list.size());
                     mutex.wait();
                 } else {
-                    System.out.println("aaaaa");
-                    String minString = list.get(0);	
+                    String minString = list.get(0);
                     zk.delete(root +"/"+ minString, 0);
+                    return;
                 }
             }
         }
     }
 
-    String ler(boolean souLider) throws KeeperException, InterruptedException{
-      String retvalue = "";
-      while (true) {
-          synchronized (mutex) {
-              List<String> list = zk.getChildren(root, true);
-              if (list.size() == 0) {
-                  System.out.println("Esperando pergunta");
-                  mutex.wait();
-              } else {
-                String minString = list.get(0);
-                byte[] b = zk.getData(root +"/"+ minString,false, null);
-                retvalue = new String (b);
+    String ler() throws KeeperException, InterruptedException{
+        String retvalue = "";
+        while (true) {
+            synchronized (mutex) {
+                List<String> list = zk.getChildren(root, true);
+                if (list.size() == 0) {
+                    mutex.wait();
+                } else {
+                    String minString = list.get(0);
+                    byte[] b = zk.getData(root +"/"+ minString,false, null);
+                    retvalue = new String (b);
+                    return retvalue;
+                }
+            }
+        }
+    }
+
+    /*String ler() throws KeeperException, InterruptedException{
+        String retvalue = "";
+        while (this.estaVazio()) {
+            if(souLider){
                 return retvalue;
-              }
-          }
-      }
-  }
+            }
+        }
+        List<String> list = zk.getChildren(root, true);
+        String minString = list.get(0);
+        byte[] b = zk.getData(root +"/"+ minString,false, null);
+        retvalue = new String (b);
+        return retvalue;
+    }*/
 
-
-    public void votar(String resposta, int numJogadores) {
-        System.out.println("Foi");
+    boolean estaVazio() throws KeeperException, InterruptedException{
+        List<String> list = zk.getChildren(root, true);
+        if (list.size() == 0) {
+            return true;
+        } else {
+            return false;
+        }    
     }
 
-    public void termina(int voto) {
-        System.out.println("terminou");
+    int tamanhoLista() throws KeeperException, InterruptedException{
+        List<String> list = zk.getChildren(root, true);
+        return (list.size());   
     }
+
 }

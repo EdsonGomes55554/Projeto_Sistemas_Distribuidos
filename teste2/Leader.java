@@ -17,11 +17,12 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
+
 public class Leader extends Eleicao {
     String leader;
-    String id; 
+    String id; //Id of the leader
     String pathName;
-    
+
     Leader(String address, String name, String leader, int id) {
         super(address);
         this.root = name;
@@ -29,10 +30,12 @@ public class Leader extends Eleicao {
         this.id = new Integer(id).toString();
         if (zk != null) {
             try {
+                //Create election znode
                 Stat s1 = zk.exists(root, false);
                 if (s1 == null) {
                     zk.create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }  
+                //Checking for a leader
                 Stat s2 = zk.exists(leader, false);
                 if (s2 != null) {
                     byte[] idLeader = zk.getData(leader, false, s2);
@@ -77,8 +80,11 @@ public class Leader extends Eleicao {
                     maxString = s;
                 }
             }
+            //Exists with watch
             Stat s = zk.exists(root+"/"+maxString, this);
+            //Step 5
             if (s != null) {
+                //Wait for notification
                 break;
             }
         }
@@ -87,19 +93,17 @@ public class Leader extends Eleicao {
     }
     
     synchronized public void process(WatchedEvent event) {
-        synchronized (mutex) {
             if (event.getType() == Event.EventType.NodeDeleted) {
                 try {
                     boolean success = check();
                 } catch (Exception e) {e.printStackTrace();}
             }
-        }
     }
     
     void leader() throws KeeperException, InterruptedException {
         System.out.println("Voce e o lider!");
-        //Create leader znode
         souLider = true;
+        fazerPergunta(endereco);
         Stat s2 = zk.exists(leader, false);
         if (s2 == null) {
             zk.create(leader, id.getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
@@ -108,17 +112,16 @@ public class Leader extends Eleicao {
         }
     }
     
-    void fazerPergunta(String ip) throws KeeperException, InterruptedException{
-        while(true) {
-            //verificaVitoria();
-            System.out.println("Faca uma pergunta");
-            Scanner scanner = new Scanner(System.in);
-            String pergunta = scanner.nextLine();
-            qPergunta.produce(pergunta);
-            System.out.println("Agora responda a pergunta");
-            responder();
-            qPergunta.consume();
-        }
-        
+    void fazerPergunta(String ip) throws KeeperException, InterruptedException {
+        try{
+            while(true) {
+                System.out.println("Faca uma pergunta");
+                Scanner scanner = new Scanner(System.in);
+                String pergunta = scanner.nextLine();
+                qPergunta.produce(pergunta);
+                System.out.println("Agora responda a pergunta");
+                responder();
+            }
+        }catch (Exception e) {e.printStackTrace();}        
     }
 }

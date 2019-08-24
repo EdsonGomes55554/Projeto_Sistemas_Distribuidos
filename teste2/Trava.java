@@ -15,15 +15,17 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
+import pacote.Barrier;
 import pacote.SyncPrimitive;
 import pacote.Queue;
 
 public class Trava {
- /*   String pathName;
+
+    /*
+    String pathName;
     boolean sucesso;
     Queue qVotos;
     String resposta;
- 
     Trava(String address, String name, Queue qVotos, String resposta) {
         super(address);
         this.root = name;
@@ -101,8 +103,8 @@ public class Trava {
     
 
     synchronized public void process(WatchedEvent event) {
-        synchronized (mutexL) {
-            mutexL.notify();
+        synchronized (mutex) {
+            mutex.notify();
             String path = event.getPath();
             if (event.getType() == Event.EventType.NodeDeleted) {
                 try {
@@ -116,17 +118,17 @@ public class Trava {
             }
         }
 
-        synchronized (mutexB) {
-            //System.out.println("Process: " + event.getType());
-            mutexB.notify();
+        synchronized (mutex) {
+            mutex.notify();
         }
     }
 
-    void compute() {
+    void compute(Barrier barrier) {
         try {
-            qVotos.votar(resposta, this);
+            qVotos.votar(resposta, this, barrier); 
         } catch (Exception e) {
             e.printStackTrace();
         }
+        //Exits, which releases the ephemeral node (Unlock operation)
     }*/
 }

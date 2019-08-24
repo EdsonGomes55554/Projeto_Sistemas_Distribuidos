@@ -18,7 +18,7 @@ import org.apache.zookeeper.data.Stat;
 
 public class Barrier extends SyncPrimitive{
     int size;
-    String name;
+    String name;    
 
     Barrier(String address, String root, int size) {
         super(address);
@@ -45,26 +45,20 @@ public class Barrier extends SyncPrimitive{
         } catch (UnknownHostException e) {
             System.out.println(e.toString());
         }
-
     }
 
     boolean enter() throws KeeperException, InterruptedException{
-        try {
-            name = new String(InetAddress.getLocalHost().getCanonicalHostName().toString());
-        } catch (UnknownHostException e) {
-            System.out.println(e.toString());
-        }
-
         name = zk.create(root + "/" + name, new byte[0], Ids.OPEN_ACL_UNSAFE,
                 CreateMode.EPHEMERAL_SEQUENTIAL);
-                System.out.println("entrei");
+                System.out.println(name);
         while (true) {
             synchronized (mutex) {
                 List<String> list = zk.getChildren(root, true);
                 if (list.size() < size) {
-                    System.out.println("aaaa");
+                    System.out.println(list.size());
                     mutex.wait();
                 } else {
+                    System.out.println("sai da entrada com : " + list.size());
                     return true;
                 }
             }
@@ -77,10 +71,8 @@ public class Barrier extends SyncPrimitive{
             synchronized (mutex) {
                 List<String> list = zk.getChildren(root, true);
                     if (list.size() > 0) {
-                        System.out.println(list.size());
                         mutex.wait();
                     } else {
-                        System.out.println("bbbbbbbbbbbbbbbb");
                         return true;
                     }
                 }
