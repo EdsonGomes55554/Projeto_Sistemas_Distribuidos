@@ -19,20 +19,11 @@ import org.apache.zookeeper.data.Stat;
 public class SyncPrimitive implements Watcher {
 
     static ZooKeeper zk = null;
-    static Integer mutexB;
-    static Integer mutexL;
-    static Integer mutexQ;
-    static Integer mutexE;
-
-    static Queue qVotos;
-    static Queue qPergunta;
-    static Queue qPerdedores;
+    static Integer mutex;
 
     String address;
     String root;
     static boolean souLider;
-
-    public static int numJogadoresMax;
 
     SyncPrimitive(String address) {
         if(zk == null){
@@ -40,10 +31,7 @@ public class SyncPrimitive implements Watcher {
                 this.address = address;
                 System.out.println("Starting ZK:");
                 zk = new ZooKeeper(address, 3000, this);
-                mutexB = new Integer(-1);
-                mutexL = new Integer(-1);
-                mutexE = new Integer(-1);
-                mutexQ = new Integer(-1);
+                mutex = new Integer(-1);
                 Stat s = zk.exists("/projeto", false);
                 if(s==null){
                     zk.create("/projeto", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -64,26 +52,10 @@ public class SyncPrimitive implements Watcher {
     }
 
     synchronized public void process(WatchedEvent event) {
-        synchronized (mutexB) {
+        synchronized (mutex) {
             //System.out.println("Process: " + event.getType());
-            mutexB.notifyAll();
+            mutex.notify();
         }
-        synchronized (mutexL) {
-            //System.out.println("Process: " + event.getType());
-            mutexL.notify();
-        }
-        synchronized (mutexE) {
-            //System.out.println("Process: " + event.getType());
-            mutexE.notify();
-        }
-        synchronized (mutexQ) {
-            //System.out.println("Process: " + event.getType());
-            mutexQ.notify();
-        }
-
     }
 
-    public void resetPergunta() {
-        qPergunta.deletaPergunta();
-    }
 }
