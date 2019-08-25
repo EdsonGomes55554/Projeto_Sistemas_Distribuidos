@@ -71,7 +71,7 @@ public class Main{
     static void jogarLider() {
         while(true) {
             try {
-                System.out.println("\n-----------------------------\n");
+                System.out.println("\n---------------------------------------\n");
                 while(qPresentes.getSize() > 0) {
                     qPresentes.consume();
                 }
@@ -88,8 +88,8 @@ public class Main{
         while(true) {
             if(!souLider) {
                 try {
-                    System.out.println("\n-----------------------------\n");
-                    System.out.println("Aguardando questao");
+                    System.out.println("\n---------------------------------------\n");
+                    System.out.println("Aguardando proposta");
                     String pergunta = qPergunta.read();
                     if(souLider) {
                         break;
@@ -105,11 +105,11 @@ public class Main{
     }
 
     static String perguntar() {
-        System.out.println("Faca uma pergunta de sim ou nao");
+        System.out.println("Faca uma proposta");
         Scanner scanner = new Scanner(System.in);
         String pergunta = scanner.nextLine();
         while(pergunta.equals("")) {
-            System.out.println("Pergunta invalida");
+            System.out.println("Proposta invalida");
             pergunta = scanner.nextLine();
         }
         try {
@@ -123,15 +123,15 @@ public class Main{
     static void responder(String pergunta) {
         try {
             qPresentes.produce("Presente");
-            System.out.println("Responda a pergunta: " + pergunta);
+            System.out.println("Aprove(O) ou disaprove(X): " + pergunta);
             Scanner scanner = new Scanner(System.in);
             boolean respostaValida = false;
             do {
                 resposta = scanner.nextLine();
-                if(resposta.equals("sim") || resposta.equals("nao")){
+                if(resposta.equals("O") || resposta.equals("X")){
                     respostaValida = true;
                 } else {
-                    System.out.println("Resposta invalida, responda com apenas sim ou nao");
+                    System.out.println("Voto invalido");
                 }
             } while(!respostaValida);
             barrier.setSize(qPresentes.getSize());
@@ -150,7 +150,7 @@ public class Main{
             }
             int voto;
             int votos = getVotos();
-            if(resposta.equals("sim")) {
+            if(resposta.equals("O")) {
                 voto = 1;
             } else {
                 voto = -1;
@@ -176,25 +176,23 @@ public class Main{
             System.out.println(getVotos());
 
             int numSim = (int) Math.ceil(qPresentes.getSize()/2.0) + (int) Math.floor(maioria/2.0);
-            System.out.println("NumSim: "+numSim);
-
             double porcentagemMaioria = Math.abs(100 * (numSim/(double) (qPresentes.getSize())));
 
-            System.out.println("-----------------------------");
-            System.out.println("Sim: " + (int) porcentagemMaioria + "%   Nao: " + ((int) (100 - porcentagemMaioria)) +"%");
+            System.out.println("---------------------------------------");
+            System.out.println("O: " + (int) porcentagemMaioria + "%   X: " + ((int) (100 - porcentagemMaioria)) +"%");
             if(maioria > 0) {
-                System.out.println("A Maioria votou sim!");
+                System.out.println("A Maioria aprovou!");
             } else if(maioria == 0) {
                 System.out.println("Empate!");
             } else {
-                System.out.println("A Maioria votou nao!");
+                System.out.println("A Maioria disaprovou!");
             }
-            System.out.println("-----------------------------\n");
+            System.out.println("---------------------------------------");
             if(souLider) {
                 qPergunta.consume();
             }
             if((voto == 1 && maioria < 0) || (voto == -1 && maioria > 0)) {
-                System.out.println("No impopular");
+                System.out.println("Opniao impopular");
                 new Thread().sleep(2000);
                 System.exit(0);
             }
