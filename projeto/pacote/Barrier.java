@@ -20,19 +20,11 @@ public class Barrier extends SyncPrimitive{
     int size;
     String name;
 
-    /**
-     * Barrier constructor
-     *
-     * @param address
-     * @param root
-     * @param size
-     */
     Barrier(String address, String root, int size) {
         super(address);
         this.root = root;
         this.size = size;
 
-        // Create barrier node
         if (zk != null) {
             try {
                 Stat s = zk.exists(root, true);
@@ -47,26 +39,14 @@ public class Barrier extends SyncPrimitive{
                 System.out.println("Interrupted exception");
             }
         }
-
-        // My node name
         try {
             name = new String(InetAddress.getLocalHost().getCanonicalHostName().toString());
         } catch (UnknownHostException e) {
             System.out.println(e.toString());
         }
-        
-
-
     }
 
-    /**
-     * Join barrier
-     *
-     * @return
-     * @throws KeeperException
-     * @throws InterruptedException
-     */
-
+    
     boolean enter() throws KeeperException, InterruptedException{
         try {
             name = new String(InetAddress.getLocalHost().getCanonicalHostName().toString());
@@ -81,21 +61,11 @@ public class Barrier extends SyncPrimitive{
                 if (list.size() < size) {
                     mutex.wait();
                 } else {
-                    System.out.println(list.size());
                     return true;
                 }
             }
         }
     }
-
-    /**
-     * Wait until all reach barrier
-     *
-     * @return
-     * @throws KeeperException
-     * @throws InterruptedException
-     */
-
 
     boolean leave() throws KeeperException, InterruptedException{
         zk.delete(name, 0);
@@ -103,13 +73,15 @@ public class Barrier extends SyncPrimitive{
             synchronized (mutex) {
                 List<String> list = zk.getChildren(root, true);
                     if (list.size() > 0) {
-                        System.out.println(list.size());
                         mutex.wait();
                     } else {
-                        System.out.println("vou sair");
                         return true;
                     }
                 }
             }
+    }
+
+    void setSize(int size) {
+        this.size = size;
     }
 }

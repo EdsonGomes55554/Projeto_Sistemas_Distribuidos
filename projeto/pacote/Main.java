@@ -27,7 +27,6 @@ public class Main{
     static Queue qVotos;
     static Queue qPergunta;
     static Queue qPresentes;
-    static Queue qPerdedores;
 
     static boolean souLider;
 
@@ -42,17 +41,16 @@ public class Main{
         Random rand = new Random();
         int r = rand.nextInt(1000000);
         inicializar();
-        resetNumPerdedores();
     	Leader leader = new Leader(endereco,"/election","/leader",r);
         try{
             boolean success = leader.elect();
             souLider = success;
         	if (success) {
-                jogarLider(endereco);
+                jogarLider();
         	} else {
-                jogarNaoLider();
+                jogarEleitor();
                 if(souLider) {
-                    jogarLider(endereco);
+                    jogarLider();
                 }
             }         
         } catch (KeeperException e){
@@ -65,24 +63,15 @@ public class Main{
     public static void inicializar() {
         qVotos = new Queue(endereco, "/projeto/votos");
         qPergunta = new Queue(endereco, "/projeto/pergunta");
-        qPerdedores = new Queue(endereco, "/projeto/perdedores");
         qPresentes = new Queue(endereco, "/projeto/presentes");
         lock = new Lock(endereco,"/projeto/lock", resposta);
+        barrier = new Barrier(endereco, "/projeto/b1", 0);
     }
 
-    public static void resetNumPerdedores() {
-        try {
-            qPerdedores.consume();
-            qPerdedores.produce("0");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
-    }
-
-    static void jogarLider(String ip) {
+    static void jogarLider() {
         while(true) {
             try {
+                System.out.println("\n-----------------------------\n");
                 while(qPresentes.getSize() > 0) {
                     qPresentes.consume();
                 }
@@ -95,10 +84,12 @@ public class Main{
         }
     }
 
-    static void jogarNaoLider() {
+    static void jogarEleitor() {
         while(true) {
             if(!souLider) {
                 try {
+                    System.out.println("\n-----------------------------\n");
+                    System.out.println("Aguardando questao");
                     String pergunta = qPergunta.read();
                     if(souLider) {
                         break;
@@ -114,9 +105,13 @@ public class Main{
     }
 
     static String perguntar() {
-        System.out.println("Faca uma pergunta");
+        System.out.println("Faca uma pergunta de sim ou nao");
         Scanner scanner = new Scanner(System.in);
         String pergunta = scanner.nextLine();
+        while(pergunta.equals("")) {
+            System.out.println("Pergunta invalida");
+            pergunta = scanner.nextLine();
+        }
         try {
             qPergunta.produce(pergunta);
         } catch (Exception e) {
@@ -139,8 +134,7 @@ public class Main{
                     System.out.println("Resposta invalida, responda com apenas sim ou nao");
                 }
             } while(!respostaValida);
-            barrier = new Barrier(endereco, "/projeto/b1", qPresentes.getSize());
-            System.out.println(qPresentes.getSize());
+            barrier.setSize(qPresentes.getSize());
             barrier.enter();
             votar();
         } catch (Exception e) {
@@ -148,21 +142,12 @@ public class Main{
         }
     }
 
+
     public static void votar() {
         try{
             lock.lock();
             while(!lock.testMin()) {
             }
-            continuaVotar();  
-        } catch (KeeperException e){
-            e.printStackTrace();
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
-    }
-
-    public static void continuaVotar() {
-        try {
             int voto;
             int votos = getVotos();
             if(resposta.equals("sim")) {
@@ -174,19 +159,29 @@ public class Main{
             qVotos.consume();
             qVotos.produce(String.valueOf(votos));
             lock.unlock();
+            barrier.leave();
             terminaRodada(voto);
-        } catch (Exception e) {
+        } catch (KeeperException e){
+            e.printStackTrace();
+        } catch (InterruptedException e){
             e.printStackTrace();
         }
-        
     }
 
-    public static void terminaRodada(int voto) {
 
+    public static void terminaRodada(int voto) {
         try{
-            barrier.leave();
             barrier.enter();
             int maioria = getVotos();
+            System.out.println(getVotos());
+
+            int numSim = (int) Math.ceil(qPresentes.getSize()/2.0) + (int) Math.floor(maioria/2.0);
+            System.out.println("NumSim: "+numSim);
+
+            double porcentagemMaioria = Math.abs(100 * (numSim/(double) (qPresentes.getSize())));
+
+            System.out.println("-----------------------------");
+            System.out.println("Sim: " + (int) porcentagemMaioria + "%   Nao: " + ((int) (100 - porcentagemMaioria)) +"%");
             if(maioria > 0) {
                 System.out.println("A Maioria votou sim!");
             } else if(maioria == 0) {
@@ -194,17 +189,18 @@ public class Main{
             } else {
                 System.out.println("A Maioria votou nao!");
             }
+            System.out.println("-----------------------------\n");
             if(souLider) {
                 qPergunta.consume();
             }
             if((voto == 1 && maioria < 0) || (voto == -1 && maioria > 0)) {
-                System.out.println("Voce perdeu!");
+                System.out.println("No impopular");
                 new Thread().sleep(2000);
                 System.exit(0);
             }
             barrier.leave();
             if(qPresentes.getSize() <= 2) {
-                System.out.println("Parabens, voce venceu!");
+                System.out.println("Impossivel continuar devido a quantidade!");
                 try {
                     new Thread().sleep(2000);
                 } catch (Exception e) {

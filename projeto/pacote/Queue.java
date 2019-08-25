@@ -16,9 +16,6 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
-import pacote.Eleicao;
-import pacote.Barrier;
-import pacote.Trava;
 
 public class Queue extends SyncPrimitive {
 
@@ -100,7 +97,6 @@ public class Queue extends SyncPrimitive {
                     if(souLider) {
                         return "";
                     }
-                    System.out.println("Esperando pergunta");
                     mutex.wait();
                 } else {
                     String minString = list.get(0);

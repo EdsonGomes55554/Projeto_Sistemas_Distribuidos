@@ -111,7 +111,9 @@ public class Leader extends SyncPrimitive {
     }
     
     void leader() throws KeeperException, InterruptedException {
-        System.out.println("Voce e o lider!");
+        System.out.println("+---------------------------+");
+        System.out.println("|      Voce e o lider!      |");
+        System.out.println("+---------------------------+");
         //Create leader znode
         souLider = true;
         Main.souLider = true;
