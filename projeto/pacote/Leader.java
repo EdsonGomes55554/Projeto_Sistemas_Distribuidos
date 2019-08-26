@@ -111,12 +111,10 @@ public class Leader extends SyncPrimitive {
     }
     
     void leader() throws KeeperException, InterruptedException {
-        System.out.println("+-------------------------------------+");
-        System.out.println("|      Voce e o lider da sessao!      |");
-        System.out.println("+-------------------------------------+");
         //Create leader znode
         souLider = true;
         Main.souLider = true;
+        Main.liderAvisado = true;
         Stat s2 = zk.exists(leader, false);
         if (s2 == null) {
             zk.create(leader, id.getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);

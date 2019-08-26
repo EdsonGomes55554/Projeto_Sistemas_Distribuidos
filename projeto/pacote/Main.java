@@ -29,6 +29,7 @@ public class Main{
     static Queue qPresentes;
 
     static boolean souLider;
+    static boolean liderAvisado;
 
     static Barrier barrier;
 
@@ -41,7 +42,12 @@ public class Main{
         Random rand = new Random();
         int r = rand.nextInt(1000000);
         inicializar();
-    	Leader leader = new Leader(endereco,"/election","/leader",r);
+        Leader leader = new Leader(endereco,"/election","/leader",r);
+        try {
+            qPresentes.produce("Presente");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         try{
             boolean success = leader.elect();
             souLider = success;
@@ -71,10 +77,13 @@ public class Main{
     static void jogarLider() {
         while(true) {
             try {
-                System.out.println("\n---------------------------------------\n");
-                while(qPresentes.getSize() > 0) {
-                    qPresentes.consume();
+                if(liderAvisado) {
+                    System.out.println("+-------------------------------------+");
+                    System.out.println("|      Voce e o lider da sessao!      |");
+                    System.out.println("+-------------------------------------+");
+                    liderAvisado = false;
                 }
+                System.out.println("\n---------------------------------------\n");
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -92,6 +101,7 @@ public class Main{
                     System.out.println("Aguardando proposta");
                     String pergunta = qPergunta.read();
                     if(souLider) {
+                        System.out.println("O lider da sessao saiu");
                         break;
                     }
                     responder(pergunta);
@@ -122,18 +132,22 @@ public class Main{
 
     static void responder(String pergunta) {
         try {
-            qPresentes.produce("Presente");
-            System.out.println("Aprove(O) ou disaprove(X): " + pergunta);
-            Scanner scanner = new Scanner(System.in);
-            boolean respostaValida = false;
-            do {
-                resposta = scanner.nextLine();
-                if(resposta.equals("O") || resposta.equals("X")){
-                    respostaValida = true;
-                } else {
-                    System.out.println("Voto invalido");
-                }
-            } while(!respostaValida);
+            if(souLider) {
+                resposta = "O";
+            } else {
+                System.out.println("Aprove(O) ou desaprove(X): ");
+                System.out.println(pergunta);
+                Scanner scanner = new Scanner(System.in);
+                boolean respostaValida = false;
+                do {
+                    resposta = scanner.nextLine();
+                    if(resposta.equals("O") || resposta.equals("X")){
+                        respostaValida = true;
+                    } else {
+                        System.out.println("Voto invalido");
+                    }
+                } while(!respostaValida);
+            }
             barrier.setSize(qPresentes.getSize());
             barrier.enter();
             votar();
@@ -173,27 +187,40 @@ public class Main{
         try{
             barrier.enter();
             int maioria = getVotos();
-            System.out.println(getVotos());
 
             int numSim = (int) Math.ceil(qPresentes.getSize()/2.0) + (int) Math.floor(maioria/2.0);
-            double porcentagemMaioria = Math.abs(100 * (numSim/(double) (qPresentes.getSize())));
+            double porcentagemMaioria = Math.ceil(Math.abs(100 * (numSim/(double) (qPresentes.getSize()))));
 
             System.out.println("---------------------------------------");
             System.out.println("O: " + (int) porcentagemMaioria + "%   X: " + ((int) (100 - porcentagemMaioria)) +"%");
             if(maioria > 0) {
                 System.out.println("A Maioria aprovou!");
+                if(souLider) {
+                    System.out.println("Proposta aprovada");
+                }
             } else if(maioria == 0) {
                 System.out.println("Empate!");
+                if(souLider) {
+                    System.out.println("Proposta resusada");
+                }
             } else {
-                System.out.println("A Maioria disaprovou!");
+                System.out.println("A Maioria recusou!");
+                if(souLider) {
+                    System.out.println("Proposta resusada");
+                }
             }
             System.out.println("---------------------------------------");
             if(souLider) {
                 qPergunta.consume();
             }
-            if((voto == 1 && maioria < 0) || (voto == -1 && maioria > 0)) {
-                System.out.println("Opniao impopular");
-                new Thread().sleep(2000);
+            System.out.println("Voce deseja deixar a sessao?");
+            Scanner scanner = new Scanner(System.in);
+            resposta = scanner.nextLine();
+            while(!resposta.equals("sim") && !resposta.equals("nao")) {
+                System.out.println("Resposta invalida");
+                resposta = scanner.nextLine();
+            }
+            if(resposta.equals("sim")) {
                 System.exit(0);
             }
             barrier.leave();
