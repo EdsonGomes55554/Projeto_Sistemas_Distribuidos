@@ -224,7 +224,7 @@ public class Main{
                 System.exit(0);
             }
             barrier.leave();
-            if(qPresentes.getSize() <= 2) {
+            if(qPresentes.getSize() <= 1) {
                 System.out.println("Impossivel continuar devido a quantidade!");
                 try {
                     new Thread().sleep(2000);
